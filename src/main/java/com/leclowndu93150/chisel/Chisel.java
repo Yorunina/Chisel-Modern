@@ -24,6 +24,7 @@ import com.leclowndu93150.chisel.network.ChiselNetwork;
 import com.leclowndu93150.chisel.worldgen.ChiselBiomeModifiers;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -40,6 +41,7 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import org.slf4j.Logger;
@@ -146,6 +148,12 @@ public class Chisel {
                 MenuScreens.register(ChiselMenus.HITECH_CHISEL_MENU.get(), HitechChiselScreen::new);
                 MenuScreens.register(ChiselMenus.AUTO_CHISEL_MENU.get(), AutoChiselScreen::new);
             });
+        }
+
+        @SubscribeEvent
+        public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+            event.registerEntityRenderer(ChiselEntities.CLOUD_IN_A_BOTTLE.get(), ThrownItemRenderer::new);
+            event.registerEntityRenderer(ChiselEntities.BALL_O_MOSS.get(), ThrownItemRenderer::new);
         }
 
         @SubscribeEvent
