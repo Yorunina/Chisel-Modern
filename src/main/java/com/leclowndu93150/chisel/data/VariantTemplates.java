@@ -140,12 +140,31 @@ public class VariantTemplates {
         COBBLESTONE_MOSSY = List.copyOf(mossy);
     }
 
-    public static final List<VariationData> PILLAR = List.of(
-            new VariationData("plainplain", "Plain-Capped Plain Pillar", columnPillar()),
-            new VariationData("plaingreek", "Greek-Capped Plain Pillar", columnPillar()),
-            new VariationData("greekplain", "Plain-Capped Greek Pillar", columnPillar()),
-            new VariationData("greekgreek", "Greek-Capped Greek Pillar", columnPillar()),
-            new VariationData("convex_plain", "Convexed Pillar", cubeAll("-top")),
+    public static final List<VariationData> ICE_PILLAR = List.of(
+            new VariationData("plainplain", "Plain-Capped Plain Pillar", cubeAll("-top")),
+            new VariationData("plaingreek", "Greek-Capped Plain Pillar", cubeAll("-top")),
+            new VariationData("greekplain", "Plain-Capped Greek Pillar", cubeAll("-top")),
+            new VariationData("greekgreek", "Greek-Capped Greek Pillar", cubeAll("-top")),
+            new VariationData("convexplain", "Convexed-Capped Plain Pillar", cubeAll("-top")),
+            new VariationData("carved", "Scribed Pillar", cubeColumn()),
+            new VariationData("ornamental", "Ornamental Pillar", cubeColumn())
+    );
+
+    public static final List<VariationData> MARBLE_PILLAR = List.of(
+            new VariationData("pillar", "Large Pillar", cubeAll("-top")),
+            new VariationData("default", "Small-Concaved Pillar", cubeAll("-top")),
+            new VariationData("simple", "Simple Pillar", cubeAll("-top")),
+            new VariationData("convex", "Convexed Pillar", cubeAll("-top")),
+            new VariationData("rough", "Rough", cubeAll("-top")),
+            new VariationData("greekdecor", "Decor-Capped Greek Pillar", cubeAll("-top")),
+            new VariationData("greekgreek", "Greek-Capped Greek Pillar", cubeAll("-top")),
+            new VariationData("greekplain", "Plain-Capped Greek Pillar", cubeAll("-top")),
+            new VariationData("plaindecor", "Decor-Capped Plain Pillar", cubeAll("-top")),
+            new VariationData("plaingreek", "Greek-Capped Plain Pillar", cubeAll("-top")),
+            new VariationData("plainplain", "Plain-Capped Plain Pillar", cubeAll("-top")),
+            new VariationData("widedecor", "Decor-Capped Wide Pillar", cubeAll("-top")),
+            new VariationData("widegreek", "Greek-Capped Wide Pillar", cubeAll("-top")),
+            new VariationData("wideplain", "Plain-Capped Wide Pillar", cubeAll("-top")),
             new VariationData("carved", "Scribed Pillar", cubeColumn()),
             new VariationData("ornamental", "Ornamental Pillar", cubeColumn())
     );
