@@ -4,6 +4,8 @@ import com.leclowndu93150.chisel.Chisel;
 import com.leclowndu93150.chisel.api.block.ChiselBlockType;
 import com.leclowndu93150.chisel.client.util.CTMDetection;
 import com.leclowndu93150.chisel.init.ChiselBlocks;
+import com.leclowndu93150.chisel.init.ChiselItems;
+import com.leclowndu93150.chisel.inventory.ChiselMenu;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -12,8 +14,15 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.registries.RegistryObject;
 
 import java.util.ArrayList;
@@ -29,8 +38,50 @@ public class ChiselDebugCommands {
                                 .executes(ChiselDebugCommands::placeCTMBlocks))
                         .then(Commands.literal("placeall")
                                 .executes(ChiselDebugCommands::placeAllBlocks))
+                        .then(Commands.literal("openchisel")
+                                .executes(ChiselDebugCommands::openDebugChisel))
                 )
         );
+    }
+
+    private static int openDebugChisel(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        ServerPlayer player = source.getPlayer();
+
+        if (player == null) {
+            source.sendFailure(Component.literal("This command must be run by a player"));
+            return 0;
+        }
+
+        ItemStack mainHand = player.getMainHandItem();
+        boolean gavChisel = false;
+        if (mainHand.isEmpty()) {
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ChiselItems.IRON_CHISEL.get()));
+            gavChisel = true;
+        } else if (!(mainHand.getItem() instanceof com.leclowndu93150.chisel.api.IChiselItem)) {
+            source.sendFailure(Component.literal("Hold a chisel or have an empty main hand"));
+            return 0;
+        }
+
+        NetworkHooks.openScreen(player, new MenuProvider() {
+            @Override
+            public Component getDisplayName() {
+                return Component.literal("Debug Chisel (All Blocks)");
+            }
+
+            @Override
+            public AbstractContainerMenu createMenu(int containerId, Inventory playerInv, Player p) {
+                ChiselMenu menu = new ChiselMenu(containerId, playerInv, InteractionHand.MAIN_HAND);
+                menu.setDebugShowAll(true);
+                return menu;
+            }
+        }, buf -> {
+            buf.writeBoolean(true);
+            buf.writeBoolean(true);
+        });
+
+        source.sendSuccess(() -> Component.literal("Opened debug chisel with all variants"), false);
+        return 1;
     }
 
     private static int placeCTMBlocks(CommandContext<CommandSourceStack> context) {

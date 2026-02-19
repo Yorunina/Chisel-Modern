@@ -1,7 +1,6 @@
 package com.leclowndu93150.chisel.inventory;
 
 import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.ItemStack;
 
 /**
  * Input slot for the chisel GUI where players place blocks to be chiseled.
@@ -20,6 +19,7 @@ public class SlotChiselInput extends Slot {
     public void setChanged() {
         super.setChanged();
         container.onChiselSlotChanged();
+        container.setScrollRow(0);
         container.getInventoryChisel().updateItems();
     }
 

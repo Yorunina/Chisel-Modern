@@ -1,21 +1,27 @@
 package com.leclowndu93150.chisel.inventory;
 
 import com.leclowndu93150.chisel.api.IChiselItem;
+import com.leclowndu93150.chisel.api.block.ChiselBlockType;
 import com.leclowndu93150.chisel.carving.CarvingHelper;
+import com.leclowndu93150.chisel.init.ChiselBlocks;
 import net.minecraft.core.NonNullList;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraftforge.registries.RegistryObject;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Inventory for the chisel selection grid.
  * The "special slot" (last slot) holds the target item being chiseled.
  * Selection slots (0 to size-1) display available variations.
+ * All variants are stored in a separate list to support scrolling.
  */
 public class InventoryChiselSelection implements Container {
 
@@ -24,6 +30,10 @@ public class InventoryChiselSelection implements Container {
     @Nullable
     ChiselMenu container;
     NonNullList<ItemStack> inventory;
+    /** All available variants (may exceed visible slot count) */
+    private List<ItemStack> allVariants = new ArrayList<>();
+    /** When true, updateItems() loads ALL chisel blocks instead of just one carving group */
+    private boolean debugShowAll = false;
 
     public InventoryChiselSelection(ChiselMenu container, int size) {
         this.size = size;
@@ -130,18 +140,40 @@ public class InventoryChiselSelection implements Container {
      */
     public void clearItems() {
         activeVariations = 0;
+        allVariants.clear();
         for (int i = 0; i < size; i++) {
             setItem(i, ItemStack.EMPTY);
         }
     }
 
+    public void setDebugShowAll(boolean debugShowAll) {
+        this.debugShowAll = debugShowAll;
+    }
+
+    public boolean isDebugShowAll() {
+        return debugShowAll;
+    }
+
     /**
      * Updates the selection slots based on the current target item.
      * Populates with available variations for chiseling.
+     * Stores all variants for scrolling support.
      */
     public void updateItems() {
         ItemStack target = getStackInSpecialSlot();
         clearItems();
+
+        if (debugShowAll) {
+            allVariants.clear();
+            for (ChiselBlockType<?> blockType : ChiselBlocks.ALL_BLOCK_TYPES) {
+                for (RegistryObject<? extends Block> reg : blockType.getAllBlocks()) {
+                    allVariants.add(new ItemStack(reg.get()));
+                }
+            }
+            activeVariations = allVariants.size();
+            updateVisibleSlots(0);
+            return;
+        }
 
         if (target.isEmpty()) {
             return;
@@ -153,15 +185,47 @@ public class InventoryChiselSelection implements Container {
         }
 
         List<Item> variations = CarvingHelper.getItemsInGroup(group);
-        activeVariations = 0;
-
+        allVariants.clear();
         for (Item item : variations) {
-            if (activeVariations >= size) {
-                break;
-            }
-            setItem(activeVariations, new ItemStack(item));
-            activeVariations++;
+            allVariants.add(new ItemStack(item));
         }
+        activeVariations = allVariants.size();
+
+        updateVisibleSlots(0);
+    }
+
+    /**
+     * Updates the visible slots based on the scroll offset (in rows).
+     * @param scrollRow the first visible row index
+     */
+    public void updateVisibleSlots(int scrollRow) {
+        int cols = container != null ? container.getSelectionCols() : 10;
+        int startIndex = scrollRow * cols;
+        for (int i = 0; i < size; i++) {
+            int variantIndex = startIndex + i;
+            if (variantIndex < allVariants.size()) {
+                setItem(i, allVariants.get(variantIndex).copy());
+            } else {
+                setItem(i, ItemStack.EMPTY);
+            }
+        }
+    }
+
+    /**
+     * @return total number of variants available (may exceed visible slot count)
+     */
+    public int getTotalVariants() {
+        return allVariants.size();
+    }
+
+    /**
+     * Gets a variant by its absolute index (not slot index).
+     */
+    public ItemStack getVariant(int absoluteIndex) {
+        if (absoluteIndex < 0 || absoluteIndex >= allVariants.size()) {
+            return ItemStack.EMPTY;
+        }
+        return allVariants.get(absoluteIndex);
     }
 
     @Override

@@ -6,6 +6,7 @@ import com.leclowndu93150.chisel.network.client.ChunkDataPacket;
 import com.leclowndu93150.chisel.network.server.ChiselButtonPacket;
 import com.leclowndu93150.chisel.network.server.ChiselFuzzyPacket;
 import com.leclowndu93150.chisel.network.server.ChiselModePacket;
+import com.leclowndu93150.chisel.network.server.ChiselScrollPacket;
 import com.leclowndu93150.chisel.network.server.HitechSettingsPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -53,6 +54,12 @@ public class ChiselNetwork {
                 .encoder(HitechSettingsPacket::encode)
                 .decoder(HitechSettingsPacket::decode)
                 .consumerMainThread(HitechSettingsPacket::handle)
+                .add();
+
+        CHANNEL.messageBuilder(ChiselScrollPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .encoder(ChiselScrollPacket::encode)
+                .decoder(ChiselScrollPacket::decode)
+                .consumerMainThread(ChiselScrollPacket::handle)
                 .add();
 
         CHANNEL.messageBuilder(ChiselFuzzyPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
