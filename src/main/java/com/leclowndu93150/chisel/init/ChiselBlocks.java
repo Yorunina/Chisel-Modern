@@ -5,6 +5,7 @@ import com.leclowndu93150.chisel.api.block.ChiselBlockType;
 import com.leclowndu93150.chisel.block.BlockAutoChisel;
 import com.leclowndu93150.chisel.block.BlockBrownstone;
 import com.leclowndu93150.chisel.block.BlockCarvable;
+import com.leclowndu93150.chisel.block.BlockCarvableBookshelf;
 import com.leclowndu93150.chisel.block.BlockCarvableCarpet;
 import com.leclowndu93150.chisel.block.BlockCarvableGlass;
 import com.leclowndu93150.chisel.block.BlockCarvablePane;
@@ -570,7 +571,7 @@ public class ChiselBlocks {
                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
                     .tag(BlockTags.ICE)
                     .defaultModelTemplate(simpleBlockTranslucent())
-                    .variations(VariantTemplates.PILLAR)
+                    .variations(VariantTemplates.ICE_PILLAR)
                     .build()
     );
 
@@ -1002,14 +1003,7 @@ public class ChiselBlocks {
                             .strength(1.75f, 10.0f)
                             .sound(SoundType.STONE))
                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
-                    .variations(VariantTemplates.PILLAR)
-                    .variation("simple", "Simple Pillar", columnPillar())
-                    .variation("rough", "Rough", columnPillar())
-                    .variation("widedecor", "Decor-Capped Wide Pillar", columnPillar())
-                    .variation("widegreek", "Greek-Capped Wide Pillar", columnPillar())
-                    .variation("wideplain", "Plain-Capped Wide Pillar", columnPillar())
-                    .variation("pillar", "Large Pillar", columnPillar())
-                    .variation("default", "Small-Concaved Pillar", columnPillar())
+                    .variations(VariantTemplates.MARBLE_PILLAR)
                     .build()
     );
 
@@ -1296,7 +1290,7 @@ public class ChiselBlocks {
                     .build()
     );
 
-    public static final Map<String, ChiselBlockType<BlockCarvable>> BOOKSHELVES = createBookshelfBlocks();
+    public static final Map<String, ChiselBlockType<BlockCarvableBookshelf>> BOOKSHELVES = createBookshelfBlocks();
 
     public static final ChiselBlockType<BlockCarvablePane> IRONPANE = registerType(
             new ChiselBlockType<BlockCarvablePane>("ironpane",
@@ -1488,10 +1482,12 @@ public class ChiselBlocks {
         };
     }
 
-    private static Map<String, ChiselBlockType<BlockCarvable>> createBookshelfBlocks() {
-        Map<String, ChiselBlockType<BlockCarvable>> map = new LinkedHashMap<>();
+    private static Map<String, ChiselBlockType<BlockCarvableBookshelf>> createBookshelfBlocks() {
+        Map<String, ChiselBlockType<BlockCarvableBookshelf>> map = new LinkedHashMap<>();
         for (String woodName : BOOKSHELF_WOOD_TYPES) {
-            ChiselBlockType<BlockCarvable> builder = new ChiselBlockType<BlockCarvable>("bookshelf/" + woodName)
+            String blockTypeName = "bookshelf/" + woodName;
+            ChiselBlockType<BlockCarvableBookshelf> builder = new ChiselBlockType<>(blockTypeName,
+                    (props, data) -> new BlockCarvableBookshelf(props, data, blockTypeName))
                     .groupName(toEnglishName(woodName) + " Bookshelf")
                     .properties(() -> getBookshelfBlock(woodName))
                     .chiselSound(ChiselSound.WOOD)
@@ -1503,7 +1499,7 @@ public class ChiselBlocks {
                 builder.addVanillaBlock(Blocks.BOOKSHELF);
             }
 
-            ChiselBlockType<BlockCarvable> type = builder.build();
+            ChiselBlockType<BlockCarvableBookshelf> type = builder.build();
             map.put(woodName, type);
             ALL_BLOCK_TYPES.add(type);
         }

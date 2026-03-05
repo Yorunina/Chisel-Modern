@@ -141,6 +141,7 @@ public class HitechChiselMenu extends ChiselMenu {
             inventoryChisel.setStackInSpecialSlot(slot.getItem().copy());
         }
 
+        setScrollRow(0);
         inventoryChisel.updateItems();
 
         if (chisel.getItem() instanceof ItemChisel itemChisel) {

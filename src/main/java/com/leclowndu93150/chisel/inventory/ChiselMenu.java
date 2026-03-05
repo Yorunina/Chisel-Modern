@@ -47,11 +47,15 @@ public class ChiselMenu extends AbstractContainerMenu {
     protected SlotChiselInput inputSlot;
 
     private ClickType currentClickType;
+    private int scrollRow = 0;
 
     public static Supplier<MenuType<ChiselMenu>> MENU_TYPE_SUPPLIER;
 
     public ChiselMenu(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
         this(containerId, playerInv, buf.readBoolean() ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
+        if (buf.isReadable() && buf.readBoolean()) {
+            setDebugShowAll(true);
+        }
     }
 
     public ChiselMenu(int containerId, Inventory playerInv, InteractionHand hand) {
@@ -219,6 +223,39 @@ public class ChiselMenu extends AbstractContainerMenu {
             }
         }
         return itemstack;
+    }
+
+    public int getScrollRow() {
+        return scrollRow;
+    }
+
+    public void setScrollRow(int row) {
+        this.scrollRow = Math.max(0, Math.min(row, getMaxScrollRow()));
+        inventoryChisel.updateVisibleSlots(this.scrollRow);
+    }
+
+    public int getMaxScrollRow() {
+        int cols = getSelectionCols();
+        int totalRows = (int) Math.ceil((double) inventoryChisel.getTotalVariants() / cols);
+        int visibleRows = getSelectionSize() / cols;
+        return Math.max(0, totalRows - visibleRows);
+    }
+
+    public boolean canScroll() {
+        return inventoryChisel.getTotalVariants() > getSelectionSize();
+    }
+
+    /**
+     * Converts a visible slot index to the absolute variant index accounting for scroll.
+     */
+    public int getAbsoluteVariantIndex(int slotIndex) {
+        return scrollRow * getSelectionCols() + slotIndex;
+    }
+
+    public void setDebugShowAll(boolean debug) {
+        inventoryChisel.setDebugShowAll(debug);
+        scrollRow = 0;
+        inventoryChisel.updateItems();
     }
 
     public void onChiselSlotChanged() {

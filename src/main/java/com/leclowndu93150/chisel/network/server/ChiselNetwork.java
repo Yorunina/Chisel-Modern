@@ -19,7 +19,7 @@ public class ChiselNetwork {
 
     @SubscribeEvent
     public static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar(Chisel.MODID).versioned("1.0.1");
+        PayloadRegistrar registrar = event.registrar(Chisel.MODID).versioned("1.0.2");
 
         registrar.playToServer(
                 ChiselModePayload.TYPE,
@@ -37,6 +37,12 @@ public class ChiselNetwork {
                 HitechSettingsPayload.TYPE,
                 HitechSettingsPayload.STREAM_CODEC,
                 HitechSettingsPayload::handle
+        );
+
+        registrar.playToServer(
+                ChiselScrollPayload.TYPE,
+                ChiselScrollPayload.STREAM_CODEC,
+                ChiselScrollPayload::handle
         );
 
         registrar.playToServer(

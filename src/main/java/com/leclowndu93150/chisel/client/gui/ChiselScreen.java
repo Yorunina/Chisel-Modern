@@ -6,6 +6,7 @@ import com.leclowndu93150.chisel.carving.ChiselModeRegistry;
 import com.leclowndu93150.chisel.inventory.ChiselMenu;
 import com.leclowndu93150.chisel.item.ItemChisel;
 import com.leclowndu93150.chisel.network.server.ChiselModePayload;
+import com.leclowndu93150.chisel.network.server.ChiselScrollPayload;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.ChatFormatting;
@@ -29,6 +30,15 @@ public class ChiselScreen extends AbstractContainerScreen<ChiselMenu> {
     private static final ResourceLocation TEXTURE = Chisel.id("textures/gui/chisel2gui.png");
     public static final int GUI_WIDTH = 252;
     public static final int GUI_HEIGHT = 202;
+
+    private static final int SCROLLBAR_X = 243;
+    private static final int SCROLLBAR_Y = 8;
+    private static final int SCROLLBAR_WIDTH = 6;
+    private static final int SCROLLBAR_HEIGHT = 108;
+    private static final int SCROLLBAR_THUMB_MIN_HEIGHT = 10;
+
+    private boolean scrollbarDragging = false;
+    private double scrollbarDragOffset = 0;
 
     public ChiselScreen(ChiselMenu menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title);
@@ -115,6 +125,31 @@ public class ChiselScreen extends AbstractContainerScreen<ChiselMenu> {
         if (inputSlot.getItem().isEmpty()) {
             graphics.blit(TEXTURE, leftPos + inputSlot.x - 16, topPos + inputSlot.y - 16, 0, imageHeight, 48, 48);
         }
+
+        if (menu.canScroll()) {
+            renderScrollbar(graphics, mouseX, mouseY);
+        }
+    }
+
+    private void renderScrollbar(GuiGraphics graphics, int mouseX, int mouseY) {
+        int x = leftPos + SCROLLBAR_X;
+        int y = topPos + SCROLLBAR_Y;
+
+        graphics.fill(x, y, x + SCROLLBAR_WIDTH, y + SCROLLBAR_HEIGHT, 0xFF2B2B2B);
+
+        int maxScroll = menu.getMaxScrollRow();
+        int thumbHeight = Math.max(SCROLLBAR_THUMB_MIN_HEIGHT,
+                (int) ((float) SCROLLBAR_HEIGHT * SCROLLBAR_HEIGHT /
+                        (SCROLLBAR_HEIGHT + maxScroll * 18)));
+        int thumbY = maxScroll > 0
+                ? y + (int) ((float) menu.getScrollRow() / maxScroll * (SCROLLBAR_HEIGHT - thumbHeight))
+                : y;
+
+        boolean hovered = mouseX >= x && mouseX < x + SCROLLBAR_WIDTH
+                && mouseY >= thumbY && mouseY < thumbY + thumbHeight;
+
+        int thumbColor = scrollbarDragging ? 0xFFD0D0D0 : (hovered ? 0xFFA0A0A0 : 0xFF808080);
+        graphics.fill(x, thumbY, x + SCROLLBAR_WIDTH, thumbY + thumbHeight, thumbColor);
     }
 
     @Override
@@ -184,5 +219,77 @@ public class ChiselScreen extends AbstractContainerScreen<ChiselMenu> {
     @Override
     protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
         super.renderTooltip(graphics, mouseX, mouseY);
+    }
+
+    private void scrollTo(int row) {
+        menu.setScrollRow(row);
+        PacketDistributor.sendToServer(new ChiselScrollPayload(menu.getScrollRow()));
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (menu.canScroll()) {
+            scrollTo(menu.getScrollRow() - (int) Math.signum(scrollY));
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (menu.canScroll() && button == 0) {
+            int x = leftPos + SCROLLBAR_X;
+            int y = topPos + SCROLLBAR_Y;
+            if (mouseX >= x && mouseX < x + SCROLLBAR_WIDTH && mouseY >= y && mouseY < y + SCROLLBAR_HEIGHT) {
+                scrollbarDragging = true;
+                int maxScroll = menu.getMaxScrollRow();
+                int thumbHeight = Math.max(SCROLLBAR_THUMB_MIN_HEIGHT,
+                        (int) ((float) SCROLLBAR_HEIGHT * SCROLLBAR_HEIGHT /
+                                (SCROLLBAR_HEIGHT + maxScroll * 18)));
+                int thumbY = maxScroll > 0
+                        ? y + (int) ((float) menu.getScrollRow() / maxScroll * (SCROLLBAR_HEIGHT - thumbHeight))
+                        : y;
+                if (mouseY >= thumbY && mouseY < thumbY + thumbHeight) {
+                    scrollbarDragOffset = mouseY - thumbY;
+                } else {
+                    scrollbarDragOffset = thumbHeight / 2.0;
+                    updateScrollFromMouse(mouseY);
+                }
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (scrollbarDragging) {
+            scrollbarDragging = false;
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (scrollbarDragging) {
+            updateScrollFromMouse(mouseY);
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    private void updateScrollFromMouse(double mouseY) {
+        int y = topPos + SCROLLBAR_Y;
+        int maxScroll = menu.getMaxScrollRow();
+        int thumbHeight = Math.max(SCROLLBAR_THUMB_MIN_HEIGHT,
+                (int) ((float) SCROLLBAR_HEIGHT * SCROLLBAR_HEIGHT /
+                        (SCROLLBAR_HEIGHT + maxScroll * 18)));
+        double relativeY = mouseY - scrollbarDragOffset - y;
+        double scrollable = SCROLLBAR_HEIGHT - thumbHeight;
+        if (scrollable > 0) {
+            double ratio = relativeY / scrollable;
+            scrollTo((int) Math.round(ratio * maxScroll));
+        }
     }
 }

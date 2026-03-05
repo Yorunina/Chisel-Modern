@@ -20,6 +20,7 @@ public class SlotChiselInput extends Slot {
     public void setChanged() {
         super.setChanged();
         container.onChiselSlotChanged();
+        container.setScrollRow(0);
         container.getInventoryChisel().updateItems();
     }
 

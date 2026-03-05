@@ -7,6 +7,7 @@ import com.leclowndu93150.chisel.inventory.HitechChiselMenu;
 import com.leclowndu93150.chisel.item.ItemChisel;
 import com.leclowndu93150.chisel.network.server.ChiselButtonPayload;
 import com.leclowndu93150.chisel.network.server.ChiselModePayload;
+import com.leclowndu93150.chisel.network.server.ChiselScrollPayload;
 import com.leclowndu93150.chisel.network.server.HitechSettingsPayload;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -63,6 +64,12 @@ public class HitechChiselScreen extends AbstractContainerScreen<HitechChiselMenu
     private static final int HIGHLIGHT_TARGET_U = 36;
     private static final int HIGHLIGHT_V = 220;
 
+    private static final int SCROLLBAR_X = 251;
+    private static final int SCROLLBAR_SCROLL_Y = 8;
+    private static final int SCROLLBAR_WIDTH = 4;
+    private static final int SCROLLBAR_SCROLL_HEIGHT = 126;
+    private static final int SCROLLBAR_THUMB_MIN_HEIGHT = 10;
+
     private float rotX = 25.0F;
     private float rotY = -45.0F;
     private float zoom = 1.0F;
@@ -73,6 +80,8 @@ public class HitechChiselScreen extends AbstractContainerScreen<HitechChiselMenu
     private PreviewMode previewMode = PreviewMode.PANEL;
     private boolean autoRotate = true;
     private boolean panelClicked = false;
+    private boolean scrollbarDragging = false;
+    private double scrollbarDragOffset = 0;
     private int clickButton;
     private int clickX, clickY;
     private long lastDragTime;
@@ -234,6 +243,10 @@ public class HitechChiselScreen extends AbstractContainerScreen<HitechChiselMenu
         graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight);
 
         renderSlotHighlights(graphics);
+
+        if (menu.canScroll()) {
+            renderScrollbar(graphics, mouseX, mouseY);
+        }
 
         if (autoRotate && momentumX == 0 && momentumY == 0 && !panelClicked && System.currentTimeMillis() - lastDragTime > 2000) {
             rotY = initRotY + (2 * partialTick);
@@ -430,8 +443,51 @@ public class HitechChiselScreen extends AbstractContainerScreen<HitechChiselMenu
         return super.isHovering(x, y, width, height, mouseX, mouseY);
     }
 
+    private void renderScrollbar(GuiGraphics graphics, int mouseX, int mouseY) {
+        int x = leftPos + SCROLLBAR_X;
+        int y = topPos + SCROLLBAR_SCROLL_Y;
+
+        graphics.fill(x, y, x + SCROLLBAR_WIDTH, y + SCROLLBAR_SCROLL_HEIGHT, 0xFF2B2B2B);
+
+        int maxScroll = menu.getMaxScrollRow();
+        int thumbHeight = Math.max(SCROLLBAR_THUMB_MIN_HEIGHT,
+                (int) ((float) SCROLLBAR_SCROLL_HEIGHT * SCROLLBAR_SCROLL_HEIGHT /
+                        (SCROLLBAR_SCROLL_HEIGHT + maxScroll * 18)));
+        int thumbY = maxScroll > 0
+                ? y + (int) ((float) menu.getScrollRow() / maxScroll * (SCROLLBAR_SCROLL_HEIGHT - thumbHeight))
+                : y;
+
+        boolean hovered = mouseX >= x && mouseX < x + SCROLLBAR_WIDTH
+                && mouseY >= thumbY && mouseY < thumbY + thumbHeight;
+
+        int thumbColor = scrollbarDragging ? 0xFFD0D0D0 : (hovered ? 0xFFA0A0A0 : 0xFF808080);
+        graphics.fill(x, thumbY, x + SCROLLBAR_WIDTH, thumbY + thumbHeight, thumbColor);
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (menu.canScroll() && button == 0) {
+            int x = leftPos + SCROLLBAR_X;
+            int y = topPos + SCROLLBAR_SCROLL_Y;
+            if (mouseX >= x && mouseX < x + SCROLLBAR_WIDTH && mouseY >= y && mouseY < y + SCROLLBAR_SCROLL_HEIGHT) {
+                scrollbarDragging = true;
+                int maxScroll = menu.getMaxScrollRow();
+                int thumbHeight = Math.max(SCROLLBAR_THUMB_MIN_HEIGHT,
+                        (int) ((float) SCROLLBAR_SCROLL_HEIGHT * SCROLLBAR_SCROLL_HEIGHT /
+                                (SCROLLBAR_SCROLL_HEIGHT + maxScroll * 18)));
+                int thumbY = maxScroll > 0
+                        ? y + (int) ((float) menu.getScrollRow() / maxScroll * (SCROLLBAR_SCROLL_HEIGHT - thumbHeight))
+                        : y;
+                if (mouseY >= thumbY && mouseY < thumbY + thumbHeight) {
+                    scrollbarDragOffset = mouseY - thumbY;
+                } else {
+                    scrollbarDragOffset = thumbHeight / 2.0;
+                    updateScrollFromMouse(mouseY);
+                }
+                return true;
+            }
+        }
+
         if (isInPreviewArea(mouseX, mouseY)) {
             panelClicked = true;
             clickButton = button;
@@ -452,6 +508,10 @@ public class HitechChiselScreen extends AbstractContainerScreen<HitechChiselMenu
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (scrollbarDragging) {
+            scrollbarDragging = false;
+            return true;
+        }
         if (panelClicked) {
             lastDragTime = System.currentTimeMillis();
             panelClicked = false;
@@ -465,6 +525,10 @@ public class HitechChiselScreen extends AbstractContainerScreen<HitechChiselMenu
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (scrollbarDragging) {
+            updateScrollFromMouse(mouseY);
+            return true;
+        }
         if (panelClicked) {
             if (clickButton == 0) {
                 rotX = Math.max(-90, Math.min(90, initRotX + ((float) mouseY - clickY)));
@@ -484,12 +548,35 @@ public class HitechChiselScreen extends AbstractContainerScreen<HitechChiselMenu
             zoom = Math.max(0.5F, Math.min(3.0F, zoom));
             return true;
         }
+        if (menu.canScroll()) {
+            scrollTo(menu.getScrollRow() - (int) Math.signum(scrollY));
+            return true;
+        }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     private boolean isInPreviewArea(double mouseX, double mouseY) {
         return mouseX >= leftPos + PREVIEW_X && mouseX < leftPos + PREVIEW_X + PREVIEW_WIDTH
                 && mouseY >= topPos + PREVIEW_Y && mouseY < topPos + PREVIEW_Y + PREVIEW_HEIGHT;
+    }
+
+    private void scrollTo(int row) {
+        menu.setScrollRow(row);
+        PacketDistributor.sendToServer(new ChiselScrollPayload(menu.getScrollRow()));
+    }
+
+    private void updateScrollFromMouse(double mouseY) {
+        int y = topPos + SCROLLBAR_SCROLL_Y;
+        int maxScroll = menu.getMaxScrollRow();
+        int thumbHeight = Math.max(SCROLLBAR_THUMB_MIN_HEIGHT,
+                (int) ((float) SCROLLBAR_SCROLL_HEIGHT * SCROLLBAR_SCROLL_HEIGHT /
+                        (SCROLLBAR_SCROLL_HEIGHT + maxScroll * 18)));
+        double relativeY = mouseY - scrollbarDragOffset - y;
+        double scrollable = SCROLLBAR_SCROLL_HEIGHT - thumbHeight;
+        if (scrollable > 0) {
+            double ratio = relativeY / scrollable;
+            scrollTo((int) Math.round(ratio * maxScroll));
+        }
     }
 
     public enum PreviewMode {
